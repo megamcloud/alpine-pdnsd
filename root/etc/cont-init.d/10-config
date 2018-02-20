@@ -1,0 +1,45 @@
+#!/usr/bin/with-contenv bash
+
+[[ ! -d /data/hosts  ]] && (
+    mkdir -p /data/hosts;
+)
+
+[[ ! -f /data/hosts/hosts.local  ]] && (
+    echo "Copying hosts";
+    cp /etc/hosts /data/hosts/hosts.local;
+)
+
+[[ ! -f /data/hosts/hosts.blocked  ]] && (
+    echo "Copying blocked hosts";
+    cp /etc/hosts.blocked /data/hosts/hosts.blocked;
+)
+
+# if whitelist file exists, modify the domains in file on blocklist
+[[ -f /data/hosts/hosts.whitelisted ]] && (
+
+    # remove comments from whitelist before loading it
+    sed -e "/^\s\?\#/d" -e "/^\s*\#/d" /data/hosts/hosts.whitelisted > /tmp/whitelisted;
+
+    # unblock the rest
+    while read line;
+    do
+        echo "Unblocking : $line";
+        sed -i \
+            -e "s/\([\ \.]\)$line/\1-ub-$line/g" \
+            /data/hosts/hosts.blocked;
+    done < /tmp/whitelisted;
+    rm -f /tmp/whitelisted;
+)
+
+# setup pdnsd
+[[ ! -d /data/pdnsd  ]] && mkdir -p /data/pdnsd
+[[ ! -f /data/pdnsd/pdnsd.status  ]] && touch /data/pdnsd/pdnsd.status;
+[[ ! -f /data/pdnsd/pdnsd.cache  ]] && touch /data/pdnsd/pdnsd.cache;
+[[ ! -f /etc/pdnsd.conf  ]] && cp /defaults/pdnsd.conf /etc/pdnsd.conf;
+echo "Setup pdnsd";
+
+# use this config if exists
+[[ -f /data/pdnsd.conf  ]] && (
+    echo "Copied custom config from data to /etc";
+    cp /data/pdnsd.conf /etc/pdnsd.conf;
+) || echo "Using default config";

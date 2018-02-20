@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv sh
+
+chown root:root /etc/pdnsd.conf && chmod 644 /etc/pdnsd.conf;
+
+exec /usr/sbin/pdnsd -4 -c /etc/pdnsd.conf --status
+

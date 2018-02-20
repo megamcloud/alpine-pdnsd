@@ -1,0 +1,61 @@
+ARG ARCH=frommakefile
+ARG DOCKERSRC=frommakefile
+ARG USERNAME=frommakefile
+#
+FROM ${USERNAME}/${DOCKERSRC}:${ARCH}
+#
+ARG PUID=1001
+ARG PGID=1001
+#
+RUN set -xe \
+    && apk add --no-cache --purge -uU curl g++ make linux-headers \
+    && VERSION=1.2.9a \
+    && echo "Using version: $VERSION" \
+    && curl -o /tmp/pdnsd-${VERSION}-par.tar.gz http://members.home.nl/p.a.rombouts/pdnsd/releases/pdnsd-${VERSION}-par.tar.gz \
+    && mkdir /opt && tar xzf /tmp/pdnsd-${VERSION}-par.tar.gz -C /opt/ \
+    && cd /opt/pdnsd-${VERSION} \
+    && ./configure --prefix=/usr --sysconfdir=/etc --enable-ipv6 --enable-underscores \
+    && make && make install && rm -rf /opt/pdnsd-${VERSION} \
+    && mkdir /tmp/hosts \
+    && curl -jkSl \
+        'https://hosts-file.net/download/hosts.zip' > /tmp/hosts/hosts.zip \
+        && unzip -p /tmp/hosts/hosts.zip hosts.txt >  /tmp/hosts/hosts.file.net.hosts \
+        && rm -f /tmp/hosts/hosts.zip \
+    && curl -jkSl \
+        'https://raw.githubusercontent.com/AdAway/adaway.github.io/master/hosts.txt' \
+        > /tmp/hosts/adaway.hosts \
+    # && curl -jkSl \
+    #     'http://www.hostsfile.org/Downloads/hosts.txt' \
+    #     > /tmp/hosts/hostsfile.hosts \
+    # && curl -jkSl \
+    #     'http://winhelp2002.mvps.org/hosts.txt' \
+    #     > /tmp/hosts/mvps.hosts \
+    && curl -jkSl \
+        'http://someonewhocares.org/hosts/zero/hosts' \
+        > /tmp/hosts/someonewhocares.hosts \
+    && curl -jkSl \
+        'https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn/hosts' \
+        > /tmp/hosts/steven.black.hosts \
+    # && curl -jkSl \
+    #     'http://pgl.yoyo.org/as/serverlist.php?hostformat=hosts;showintro=0&mimetype=plaintext' \
+    #     > /tmp/hosts/yoyo.hosts \
+    && cat /tmp/hosts/*.hosts >> /tmp/hosts.blocked \
+    && sed \
+        -e 's/\r//' \
+        -e '/^\(127.0.0.1\|0.0.0.0\)/!d' \
+        -e 's/127.0.0.1/0.0.0.0/' \
+        -e 's/ \+/\t/' \
+        -e 's/#.*$//' \
+        -e 's/[ \t ]*$//'\
+        -e '/localhost$/d' \
+        < /tmp/hosts.blocked | sort -u > /etc/hosts.blocked \
+    && apk del --purge g++ make linux-headers unzip \
+    && rm -rf /var/cache/apk/* /tmp/*
+#
+COPY root/ /
+#
+VOLUME /data/
+#
+EXPOSE 53/tcp 53/udp
+#
+ENTRYPOINT ["/init"]
