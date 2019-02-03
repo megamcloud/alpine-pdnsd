@@ -12,7 +12,7 @@ RUN set -xe \
     && VERSION=1.2.9a \
     && echo "Using version: $VERSION" \
     && curl -o /tmp/pdnsd-${VERSION}-par.tar.gz http://members.home.nl/p.a.rombouts/pdnsd/releases/pdnsd-${VERSION}-par.tar.gz \
-    && mkdir /opt && tar xzf /tmp/pdnsd-${VERSION}-par.tar.gz -C /opt/ \
+    && mkdir -p /opt && tar xzf /tmp/pdnsd-${VERSION}-par.tar.gz -C /opt/ \
     && cd /opt/pdnsd-${VERSION} \
     && ./configure --prefix=/usr --sysconfdir=/etc --enable-ipv6 --enable-underscores \
     && make && make install && rm -rf /opt/pdnsd-${VERSION} \
@@ -49,7 +49,7 @@ RUN set -xe \
         -e 's/[ \t]*$//'\
         -e '/localhost$/d' \
         < /tmp/hosts.blocked | sort -u > /etc/hosts.blocked \
-    && apk del --purge g++ make linux-headers unzip \
+    && apk del --no-cache --purge g++ make linux-headers unzip \
     && rm -rf /var/cache/apk/* /tmp/*
 #
 COPY root/ /
